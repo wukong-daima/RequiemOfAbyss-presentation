@@ -1519,8 +1519,46 @@
   }
 
   // ── Data ──────────────────────────────────────────────────
+  // 입력 내용은 이 기기 localStorage에 즉시 보존되어 새로고침/오프라인에도 살아남는다.
+  // GitHub 커밋은 "발표 페이지에 게시"하는 단계이며, localStorage가 작업 원본이다.
+  const ENTRIES_LS_KEY = 'abyss_entries';
+
+  function loadLocalEntries() {
+    try {
+      return JSON.parse(localStorage.getItem(ENTRIES_LS_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function persistLocalEntries() {
+    try {
+      localStorage.setItem(ENTRIES_LS_KEY, JSON.stringify(SAVED_DATA));
+    } catch (e) {
+      // 저장 공간 초과 등은 게시(GitHub) 경로로 보완되므로 조용히 무시
+    }
+  }
+
+  // 파일에 게시된 데이터를 기준선으로, localStorage의 로컬 편집을 덮어쓴다.
+  // 주차별로 savedAt이 더 최신인 쪽을 채택해 양방향 동기화 충돌을 막는다.
+  function hydrateFromLocal() {
+    const local = loadLocalEntries();
+    for (const key of Object.keys(local)) {
+      const fileEntry  = SAVED_DATA[key];
+      const localEntry = local[key];
+      if (!fileEntry) {
+        SAVED_DATA[key] = localEntry;
+        continue;
+      }
+      const localTime = new Date(localEntry.savedAt || 0).getTime();
+      const fileTime  = new Date(fileEntry.savedAt  || 0).getTime();
+      if (localTime >= fileTime) SAVED_DATA[key] = localEntry;
+    }
+  }
+
   function saveEntry(week, data) {
     SAVED_DATA[`week_${week}`] = data;
+    persistLocalEntries();
   }
 
   function loadEntry(week) {
@@ -1941,6 +1979,7 @@
   });
 
   // ── Init ──────────────────────────────────────────────────
+  hydrateFromLocal();
   buildWeekViews();
   initNav();
 </script>
