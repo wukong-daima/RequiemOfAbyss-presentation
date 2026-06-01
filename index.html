@@ -87,17 +87,31 @@
 
     .week-btn {
       position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.1rem;
       background: var(--surface);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      padding: 0.6rem 1.4rem;
-      border-radius: 2rem;
+      padding: 0.5rem 1.1rem;
+      border-radius: 1.2rem;
       cursor: pointer;
       font-family: 'Georgia', serif;
       font-size: 0.9rem;
       letter-spacing: 0.05em;
       transition: all 0.3s ease;
     }
+
+    .week-btn .wk-range {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      font-size: 0.62rem;
+      letter-spacing: 0;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+
+    .week-btn.viz-btn { justify-content: center; }
 
     .week-btn:hover {
       border-color: var(--accent2);
@@ -559,6 +573,16 @@
       color: var(--text-muted);
       letter-spacing: 0.1em;
       margin-bottom: 0.4rem;
+      text-align: center;
+    }
+
+    /* 주차에 덧붙는 달력상 날짜 범위(작은 보조 라벨) */
+    .wk-sub {
+      display: block;
+      font-size: 0.6rem;
+      letter-spacing: 0;
+      opacity: 0.6;
+      margin-top: 0.05rem;
     }
 
     .mt-dot {
@@ -1117,12 +1141,12 @@
   </header>
 
   <nav class="week-nav" id="weekNav">
-    <button class="week-btn active" data-view="week" data-week="1">1주<span class="filled-dot"></span></button>
-    <button class="week-btn" data-view="week" data-week="2">2주<span class="filled-dot"></span></button>
-    <button class="week-btn" data-view="week" data-week="3">3주<span class="filled-dot"></span></button>
-    <button class="week-btn" data-view="week" data-week="4">4주<span class="filled-dot"></span></button>
-    <button class="week-btn" data-view="week" data-week="5">5주<span class="filled-dot"></span></button>
-    <button class="week-btn" data-view="week" data-week="6">6주<span class="filled-dot"></span></button>
+    <button class="week-btn active" data-view="week" data-week="1" title="1주차 · 5월 둘째주"><span>1주차</span><span class="wk-range">5월 둘째주</span><span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="2" title="2주차 · 5월 셋째주"><span>2주차</span><span class="wk-range">5월 셋째주</span><span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="3" title="3주차 · 5월 넷째주"><span>3주차</span><span class="wk-range">5월 넷째주</span><span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="4" title="4주차 · 5월 다섯째주"><span>4주차</span><span class="wk-range">5월 다섯째주</span><span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="5" title="5주차 · 6월 첫째주"><span>5주차</span><span class="wk-range">6월 첫째주</span><span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="6" title="6주차 · 6월 둘째주"><span>6주차</span><span class="wk-range">6월 둘째주</span><span class="filled-dot"></span></button>
     <button class="week-btn viz-btn" data-view="viz">시각화</button>
   </nav>
 
@@ -1361,6 +1385,11 @@
 <script>
   const TOTAL_WEEKS = 6;
 
+  // 주차 ↔ 달력상 주(week) 매핑
+  const WEEK_RANGES = ['5월 둘째주', '5월 셋째주', '5월 넷째주', '5월 다섯째주', '6월 첫째주', '6월 둘째주'];
+  function weekRange(w) { return WEEK_RANGES[w - 1] || ''; }
+  function weekLabel(w) { return `${w}주차 · ${weekRange(w)}`; }
+
   const MUSIC_FORMS = [
     {
       name: '칸타타 (Cantata)',
@@ -1586,7 +1615,7 @@
       div.id = `weekView${w}`;
       div.innerHTML = `
         <div class="week-form-card">
-          <p class="week-form-title">제 ${w}주 — 심연 기록</p>
+          <p class="week-form-title">제 ${w}주차 · ${weekRange(w)} — 심연 기록</p>
           <p class="week-form-desc">시그널 로그 · The Map of Abysses</p>
 
           <div class="question-block">
@@ -1754,7 +1783,7 @@
       const avg = entries.reduce((s, e) => s + (e.entropy || 0), 0) / entries.length;
       document.getElementById('statAvgEntropy').textContent = avg.toFixed(1);
       const peak = entries.reduce((a, b) => (b.entropy || 0) > (a.entropy || 0) ? b : a);
-      document.getElementById('statPeakWeek').textContent = `${peak.week}주`;
+      document.getElementById('statPeakWeek').textContent = `${peak.week}주차`;
     }
 
     renderEntropyChart(entries);
@@ -1768,7 +1797,7 @@
     if (entropyChartInst) { entropyChartInst.destroy(); entropyChartInst = null; }
     if (!entries.length) return;
 
-    const labels = Array.from({ length: TOTAL_WEEKS }, (_, i) => `${i+1}주`);
+    const labels = Array.from({ length: TOTAL_WEEKS }, (_, i) => [`${i+1}주차`, weekRange(i + 1)]);
     const data   = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
       const e = entries.find(x => x.week === i + 1);
       return e ? e.entropy : null;
@@ -1850,7 +1879,7 @@
     el.innerHTML = `<div class="music-timeline">
       ${items.map(({ week, entry }) => `
         <div class="mt-item">
-          <span class="mt-week">${week}주</span>
+          <span class="mt-week">${week}주차<span class="wk-sub">${weekRange(week)}</span></span>
           <span class="mt-dot${entry ? ' filled' : ''}"></span>
           <div class="mt-line"></div>
           ${entry && entry.music
@@ -1871,7 +1900,7 @@
         return `
           <div class="jc" style="--entropy-color:var(--border)">
             <div class="jc-empty">
-              <span class="jc-empty-week">${w}주</span>
+              <span class="jc-empty-week">${w}주차<span class="wk-sub">${weekRange(w)}</span></span>
               <span class="jc-empty-msg">아직 기록되지 않은 주입니다</span>
             </div>
           </div>`;
@@ -1881,7 +1910,7 @@
       return `
         <div class="jc has-data" style="--entropy-color:${color}">
           <div class="jc-header">
-            <span class="jc-week-label">${w}주차</span>
+            <span class="jc-week-label">${w}주차 · ${weekRange(w)}</span>
             <span class="jc-entropy" style="background:${color}">엔트로피 ${e.entropy || '—'}</span>
           </div>
           ${e.music ? `<div>
@@ -1906,7 +1935,7 @@
     el.innerHTML = `<div class="drive-pattern-list">
       ${drives.map(e => `
         <div class="dp-item">
-          <div class="dp-week">${e.week}주차</div>
+          <div class="dp-week">${e.week}주차 · ${weekRange(e.week)}</div>
           <div class="dp-text">${escHtml(e.drive)}</div>
         </div>
       `).join('')}
