@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Map of Abysses</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #07070f;
+      --surface: #0f0f1e;
+      --surface2: #161628;
+      --border: #2a2a4a;
+      --accent: #6c5ce7;
+      --accent2: #a29bfe;
+      --accent3: #fd79a8;
+      --text: #e8e8f0;
+      --text-muted: #7a7a9a;
+      --gold: #ffeaa7;
+      --teal: #00cec9;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(108,92,231,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(253,121,168,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0,206,201,0.03) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .site-header h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .site-header h1 span { color: var(--accent2); }
+
+    .site-header .subtitle {
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* ── Week nav ── */
+    .week-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1.5rem 1rem;
+      flex-wrap: wrap;
+    }
+
+    .week-btn {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.6rem 1.4rem;
+      border-radius: 2rem;
+      cursor: pointer;
+      font-family: 'Georgia', serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      transition: all 0.3s ease;
+    }
+
+    .week-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .week-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(108,92,231,0.4);
+    }
+
+    .week-btn.viz-btn.active {
+      background: linear-gradient(135deg, var(--accent3), var(--accent));
+      border-color: var(--accent3);
+      box-shadow: 0 0 20px rgba(253,121,168,0.4);
+    }
+
+    /* filled dot on week button */
+    .week-btn .filled-dot {
+      position: absolute;
+      top: 4px; right: 6px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      display: none;
+    }
+
+    .week-btn.has-entry .filled-dot { display: block; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Week form page ── */
+    .week-view { padding: 0.5rem 0 2rem; }
+
+    .week-form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.4rem;
+      padding: 2.5rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .week-form-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    }
+
+    .week-form-title {
+      font-size: 1.05rem;
+      font-weight: 400;
+      color: var(--accent2);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+    }
+
+    .week-form-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 2.2rem;
+    }
+
+    /* ── Questions ── */
+    .question-block { margin-bottom: 2rem; }
+
+    .question-label {
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 0.35rem;
+    }
+
+    .question-label .required { color: var(--accent3); margin-left: 0.2rem; }
+
+    .question-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 0.8rem;
+    }
+
+    /* Entropy scale */
+    .entropy-scale { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.73rem;
+      color: var(--text-muted);
+    }
+
+    .scale-options {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.25rem;
+    }
+
+    .scale-option {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .scale-option input[type="radio"] { display: none; }
+
+    .scale-dot {
+      width: 2.2rem;
+      height: 2.2rem;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      background: var(--surface2);
+      transition: all 0.2s;
+    }
+
+    .scale-option:hover .scale-dot,
+    .scale-option input:checked ~ .scale-dot {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(108,92,231,0.5);
+    }
+
+    @media (max-width: 500px) {
+      .scale-dot { width: 1.8rem; height: 1.8rem; font-size: 0.65rem; }
+    }
+
+    /* Text inputs */
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      color: var(--text);
+      font-family: 'Georgia', serif;
+      font-size: 0.9rem;
+      padding: 0.75rem 1rem;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 2px rgba(162,155,254,0.15);
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .form-textarea { min-height: 100px; }
+
+    /* Save */
+    .save-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: linear-gradient(135deg, var(--accent), #8e44ad);
+      border: none;
+      border-radius: 0.6rem;
+      color: #fff;
+      font-family: 'Georgia', serif;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: all 0.3s;
+    }
+
+    .save-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(108,92,231,0.4);
+    }
+
+    .save-feedback {
+      text-align: center;
+      font-size: 0.85rem;
+      margin-top: 0.6rem;
+      height: 1.2rem;
+      transition: opacity 0.5s;
+    }
+
+    /* ── Visualization ── */
+    .viz-page { padding: 0.5rem 0 2rem; }
+
+    .viz-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .viz-header h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      color: var(--accent2);
+      margin-bottom: 0.4rem;
+    }
+
+    .viz-header p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.9rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .stat-box .stat-val {
+      font-size: 2rem;
+      color: var(--accent2);
+      font-weight: 300;
+    }
+
+    .stat-box .stat-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    .viz-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+    }
+
+    @media (max-width: 580px) {
+      .viz-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .viz-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.2rem;
+      padding: 1.4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .viz-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    }
+
+    .viz-card.full-width { grid-column: 1 / -1; }
+
+    .viz-card h3 {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1.1rem;
+    }
+
+    .chart-wrap { position: relative; height: 210px; }
+    .chart-wrap canvas { max-height: 210px; }
+
+    .entropy-legend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .entropy-gradient {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #00cec9, #74b9ff, #fdcb6e, #e17055, #d63031);
+    }
+
+    .abyss-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .abyss-list::-webkit-scrollbar { width: 4px; }
+    .abyss-list::-webkit-scrollbar-track { background: var(--surface2); }
+    .abyss-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .abyss-entry {
+      background: var(--surface2);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 0.5rem 0.5rem 0;
+      padding: 0.7rem 1rem;
+    }
+
+    .abyss-entry .entry-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+    }
+
+    .abyss-entry .entry-text {
+      font-size: 0.85rem;
+      color: var(--text);
+      line-height: 1.55;
+      font-style: italic;
+    }
+
+    .music-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .music-tag {
+      background: rgba(108,92,231,0.2);
+      border: 1px solid var(--accent);
+      border-radius: 2rem;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.8rem;
+      color: var(--accent2);
+      letter-spacing: 0.05em;
+    }
+
+    .drive-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .drive-word {
+      color: var(--gold);
+      font-size: 0.82rem;
+      opacity: 0.65;
+      cursor: default;
+      padding: 0.15rem 0.35rem;
+      transition: opacity 0.2s;
+    }
+
+    .drive-word:hover { opacity: 1; }
+    .drive-word.size-lg { font-size: 1.15rem; opacity: 0.9; }
+    .drive-word.size-md { font-size: 0.95rem; opacity: 0.8; }
+
+    .drive-entries {
+      width: 100%;
+      margin-top: 1rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .drive-entry-row {
+      margin-bottom: 0.55rem;
+      font-size: 0.82rem;
+    }
+
+    .drive-entry-week {
+      color: var(--accent2);
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      margin-right: 0.5rem;
+    }
+
+    .drive-entry-text {
+      color: var(--text);
+      font-style: italic;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.83rem;
+      font-style: italic;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+
+    /* ── Visualization extras ── */
+    .viz-mb { margin-bottom: 1.2rem; }
+
+    .section-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.9rem;
+    }
+
+    /* Music timeline */
+    .music-timeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .mt-item {
+      flex: 1;
+      min-width: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .mt-item + .mt-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 22px;
+      width: 1px; height: 16px;
+      background: var(--border);
+    }
+
+    .mt-week {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+    }
+
+    .mt-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      margin-bottom: 0.5rem;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+
+    .mt-dot.filled { border-color: var(--accent); background: var(--accent); }
+
+    .mt-line {
+      position: absolute;
+      top: 38px; left: 50%; right: -50%;
+      height: 1px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .mt-item:last-child .mt-line { display: none; }
+
+    .mt-form {
+      font-size: 0.72rem;
+      color: var(--accent2);
+      text-align: center;
+      line-height: 1.4;
+      padding: 0 0.3rem;
+    }
+
+    .mt-keyword {
+      font-size: 0.66rem;
+      color: var(--accent3);
+      text-align: center;
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
+
+    .mt-empty {
+      font-size: 0.68rem;
+      color: var(--border);
+      text-align: center;
+    }
+
+    /* Journey cards */
+    .journey-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    @media (max-width: 580px) { .journey-grid { grid-template-columns: 1fr; } }
+
+    .jc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.1rem;
+      padding: 1.3rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .jc.has-data { border-color: rgba(108,92,231,0.35); }
+
+    .jc::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--entropy-color, var(--border));
+      opacity: 0.8;
+    }
+
+    .jc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.9rem;
+    }
+
+    .jc-week-label {
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .jc-entropy {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 2rem;
+      font-size: 0.72rem;
+      font-style: normal;
+      background: var(--entropy-color, var(--surface2));
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .jc-music {
+      display: inline-block;
+      font-size: 0.76rem;
+      color: var(--accent2);
+      background: rgba(108,92,231,0.12);
+      border: 1px solid rgba(108,92,231,0.3);
+      border-radius: 2rem;
+      padding: 0.2rem 0.7rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .jc-keyword {
+      font-size: 0.68rem;
+      color: var(--accent3);
+      margin-left: 0.3rem;
+      font-style: italic;
+    }
+
+    .jc-abyss {
+      font-size: 0.82rem;
+      color: var(--text);
+      font-style: italic;
+      line-height: 1.55;
+      border-left: 2px solid var(--accent);
+      padding-left: 0.7rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .jc-abyss::before { content: '\201C'; color: var(--accent2); margin-right: 0.1rem; }
+    .jc-abyss::after  { content: '\201D'; color: var(--accent2); margin-left: 0.1rem; }
+
+    .jc-drive-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .jc-drive {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .jc-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+      gap: 0.4rem;
+    }
+
+    .jc-empty-week {
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      color: var(--border);
+      text-transform: uppercase;
+    }
+
+    .jc-empty-msg {
+      font-size: 0.75rem;
+      color: var(--border);
+      font-style: italic;
+    }
+
+    /* Drive patterns */
+    .drive-pattern-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .dp-item {
+      background: var(--surface2);
+      border-radius: 0.7rem;
+      padding: 1rem 1.1rem;
+      border-left: 3px solid var(--gold);
+    }
+
+    .dp-week {
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      color: var(--accent2);
+      text-transform: uppercase;
+      margin-bottom: 0.35rem;
+    }
+
+    .dp-text {
+      font-size: 0.85rem;
+      color: var(--text);
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    /* ── Music info popup ── */
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.3rem;
+      height: 1.3rem;
+      border-radius: 50%;
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+      font-size: 0.7rem;
+      font-family: 'Georgia', serif;
+      cursor: pointer;
+      vertical-align: middle;
+      margin-left: 0.45rem;
+      background: transparent;
+      transition: background 0.2s, color 0.2s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .info-btn:hover {
+      background: var(--accent2);
+      color: var(--bg);
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 7, 15, 0.82);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open {
+      display: flex;
+      animation: overlayIn 0.25s ease;
+    }
+
+    @keyframes overlayIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.4rem;
+      padding: 2rem 1.8rem;
+      max-width: 520px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+      animation: modalIn 0.25s ease;
+    }
+
+    .modal-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 1.4rem 1.4rem 0 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-header h4 {
+      font-size: 0.8rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      font-weight: 400;
+    }
+
+    .modal-close {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 1.8rem;
+      height: 1.8rem;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      border-color: var(--accent3);
+      color: var(--accent3);
+    }
+
+
+    /* ── Music radio list ── */
+    .music-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .music-radio-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--surface2);
+    }
+
+    .music-radio-label:hover {
+      border-color: var(--accent2);
+      background: rgba(162,155,254,0.06);
+    }
+
+    .music-radio-label input[type="radio"] { display: none; }
+
+    .music-check-box {
+      width: 1.1rem;
+      height: 1.1rem;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .music-check-box::after {
+      content: '';
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .music-radio-label input:checked ~ .music-check-box {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(108,92,231,0.5);
+    }
+
+    .music-radio-label input:checked ~ .music-check-box::after { opacity: 1; }
+
+    .music-radio-label input:checked ~ .music-radio-name { color: var(--accent2); }
+
+    .music-radio-label:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(108,92,231,0.1);
+    }
+
+    .music-radio-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+
+    .music-radio-name {
+      font-size: 0.88rem;
+      color: var(--text);
+      transition: color 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .music-radio-desc {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .music-radio-label input:checked ~ .music-radio-text .music-radio-name { color: var(--accent2); }
+    .music-radio-label input:checked ~ .music-radio-text .music-radio-desc { color: rgba(162,155,254,0.7); }
+
+    /* 음악 형식 키워드 뱃지 */
+    .music-keyword {
+      display: inline-block;
+      margin-top: 0.35rem;
+      padding: 0.18rem 0.65rem;
+      background: rgba(253,121,168,0.12);
+      border: 1px solid rgba(253,121,168,0.4);
+      border-radius: 2rem;
+      font-size: 0.72rem;
+      color: var(--accent3);
+      font-style: normal;
+      letter-spacing: 0.04em;
+    }
+
+    .music-radio-metaphor {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-top: 0.3rem;
+      font-style: italic;
+    }
+
+    .music-radio-label input:checked ~ .music-radio-text .music-radio-metaphor {
+      color: rgba(162,155,254,0.6);
+    }
+
+    /* 엔트로피 모달 전용 */
+    .entropy-modal-section {
+      margin-bottom: 1.3rem;
+      padding-bottom: 1.3rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .entropy-modal-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .entropy-modal-section h5 {
+      font-size: 0.82rem;
+      color: var(--accent2);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+      font-weight: 400;
+    }
+
+    .entropy-modal-section p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .entropy-scale-guide {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.3rem 0.8rem;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+
+    .entropy-scale-guide .eg-num {
+      color: var(--accent3);
+      font-size: 0.75rem;
+      padding-top: 0.1rem;
+      white-space: nowrap;
+    }
+
+    .entropy-scale-guide .eg-desc {
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* 심연 가이드 */
+    .abyss-template-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-top: 0.5rem;
+    }
+
+    .abyss-template-item {
+      background: var(--surface2);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 0.4rem 0.4rem 0;
+      padding: 0.5rem 0.8rem;
+    }
+
+    .abyss-template-structure {
+      font-size: 0.82rem;
+      color: var(--accent2);
+      font-style: italic;
+      letter-spacing: 0.02em;
+    }
+
+    .abyss-example-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+
+    .abyss-example-item {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-style: italic;
+      line-height: 1.5;
+      padding-left: 0.8rem;
+      border-left: 2px solid var(--accent3);
+    }
+
+    /* ── Settings ── */
+    .settings-trigger {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 2rem; height: 2rem;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .settings-trigger:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .settings-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .settings-field label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header class="site-header">
+    <h1>The Map of <span>Abysses</span></h1>
+    <p class="subtitle">시그널 로그 &mdash; 나를 기록하고, 분석하고, 시각화하다</p>
+    <button class="settings-trigger" onclick="openSettingsModal()" title="GitHub 저장 설정">⚙</button>
+  </header>
+
+  <nav class="week-nav" id="weekNav">
+    <button class="week-btn active" data-view="week" data-week="1">1주<span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="2">2주<span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="3">3주<span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="4">4주<span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="5">5주<span class="filled-dot"></span></button>
+    <button class="week-btn" data-view="week" data-week="6">6주<span class="filled-dot"></span></button>
+    <button class="week-btn viz-btn" data-view="viz">시각화</button>
+  </nav>
+
+
+  <div id="weekViews"></div>
+
+  <!-- Entropy info popup -->
+  <div class="modal-overlay" id="entropyModal" onclick="closeEntropyModal(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4>내면적 무질서도 — 엔트로피란?</h4>
+        <button class="modal-close" onclick="closeEntropyModal()">✕</button>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>엔트로피(Entropy)의 원래 의미</h5>
+        <p>열역학에서 유래한 개념으로, 어떤 <strong style="color:var(--text)">시스템 내부의 무질서·혼돈의 정도</strong>를 나타냅니다. 엔트로피가 높을수록 에너지는 분산되고 질서는 붕괴됩니다. 자연 상태에서 엔트로피는 시간이 지날수록 증가하는 경향이 있습니다.</p>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>내면적 엔트로피란?</h5>
+        <p>물리학의 개념을 내면 세계에 적용한 표현입니다. <strong style="color:var(--text)">생각, 감정, 에너지가 얼마나 흩어지고 혼란스러운 상태인지</strong>를 측정합니다. 내면의 엔트로피가 높으면 집중이 어렵고, 감정이 불안정하며, 삶의 방향이 흐릿하게 느껴집니다. 낮으면 내면이 고요하고 명확하며 에너지가 응집된 상태입니다.</p>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>이 질문에서의 척도 (1 → 10)</h5>
+        <div class="entropy-scale-guide">
+          <span class="eg-num">1 – 2</span>
+          <span class="eg-desc">완벽한 고요. 생각이 맑고 감정이 안정적이며 에너지가 한 곳에 집중된 상태.</span>
+          <span class="eg-num">3 – 4</span>
+          <span class="eg-desc">약간의 잡음이 있으나 대체로 균형 잡힌 상태. 소소한 걱정이 있는 평온한 한 주.</span>
+          <span class="eg-num">5 – 6</span>
+          <span class="eg-desc">혼란과 안정이 공존. 여러 생각이 동시에 흐르며 방향을 잡기가 쉽지 않은 상태.</span>
+          <span class="eg-num">7 – 8</span>
+          <span class="eg-desc">내면이 상당히 어지럽고 감정 기복이 크며, 집중과 휴식이 모두 어려운 상태.</span>
+          <span class="eg-num">9 – 10</span>
+          <span class="eg-desc">심연의 붕괴. 모든 것이 뒤엉켜 통제 불가능하게 느껴지는 극도의 혼돈 상태.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abyss guide modal -->
+  <div class="modal-overlay" id="abyssModal" onclick="closeAbyssModal(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4>나의 심연 — 한 문장 정의 가이드</h4>
+        <button class="modal-close" onclick="closeAbyssModal()">✕</button>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>심연(深淵)이란 무엇인가?</h5>
+        <p>'심연'은 깊은 물속, 헤아릴 수 없는 깊이를 뜻합니다. 이 질문에서 심연은 <strong style="color:var(--text)">이번 주 나의 내면 가장 깊은 곳에 흐르고 있던 감정·상태·정체성</strong>을 의미합니다. 표면에 드러난 사건이나 감정이 아니라, 그 아래에 조용히 자리하고 있던 본질적인 흐름입니다.</p>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>한 문장으로 쓰는 법</h5>
+        <p>복잡한 한 주를 단 하나의 문장으로 압축하는 것이 핵심입니다. 아래 순서로 생각해 보세요.</p>
+        <div class="entropy-scale-guide" style="margin-top:0.7rem;">
+          <span class="eg-num">①</span>
+          <span class="eg-desc">이번 주 가장 자주 느꼈던 감정 하나를 고르세요. (불안, 설렘, 공허, 흥분, 피로 등)</span>
+          <span class="eg-num">②</span>
+          <span class="eg-desc">그 감정의 원인이나 성질을 구체적인 이미지나 명사로 표현해 보세요. (늪, 파도, 안개, 빛 등)</span>
+          <span class="eg-num">③</span>
+          <span class="eg-desc">둘을 연결해 "~의 ~이다" 형태의 한 문장으로 완성하세요.</span>
+        </div>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>문장 템플릿</h5>
+        <div class="abyss-template-list">
+          <div class="abyss-template-item">
+            <span class="abyss-template-structure">[감정]을/를 [이미지]로 버티던 한 주였다.</span>
+          </div>
+          <div class="abyss-template-item">
+            <span class="abyss-template-structure">[상태]를 갈망하는 [이미지]이다.</span>
+          </div>
+          <div class="abyss-template-item">
+            <span class="abyss-template-structure">[행동/상황]을/를 미루는 [감정]의 [이미지]이다.</span>
+          </div>
+          <div class="abyss-template-item">
+            <span class="abyss-template-structure">아직 [상태]이지 못한 [이미지] 속에 있다.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>예시 문장들</h5>
+        <div class="abyss-example-list">
+          <p class="abyss-example-item">"시작을 미루는 불안의 늪이다."</p>
+          <p class="abyss-example-item">"변화를 갈망하는 흔들림이다."</p>
+          <p class="abyss-example-item">"인정받고 싶은 마음이 만든 고요한 소음이다."</p>
+          <p class="abyss-example-item">"끝나지 않는 준비 속에 갇힌 정지 상태이다."</p>
+          <p class="abyss-example-item">"무언가를 잃을까 봐 아무것도 잡지 못하는 두려움이다."</p>
+          <p class="abyss-example-item">"천천히 가고 싶은데 빠르게 달려야 하는 모순이다."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Occam modal -->
+  <div class="modal-overlay" id="occamModal" onclick="closeOccamModal(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4>오컴의 면도칼이란?</h4>
+        <button class="modal-close" onclick="closeOccamModal()">✕</button>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>유래 — 윌리엄 오컴 (William of Ockham)</h5>
+        <p>14세기 영국의 철학자·신학자 윌리엄 오컴이 제시한 사유의 원칙입니다. 원래 라틴어 문장은 <strong style="color:var(--text)">"필요 이상으로 존재를 늘리지 말라"</strong>(Entia non sunt multiplicanda praeter necessitatem)입니다. '면도칼'은 불필요한 요소를 '잘라낸다'는 비유에서 왔습니다.</p>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>핵심 원리</h5>
+        <p>경쟁하는 여러 설명이 있을 때, <strong style="color:var(--text)">가장 적은 가정으로 현상을 설명하는 것을 택하라</strong>는 원칙입니다. 쉽게 말하면 "단순한 설명이 복잡한 설명보다 옳을 가능성이 높다"는 것입니다. 과학, 철학, 논리학 전반에 걸쳐 수백 년간 적용되어 온 사고의 틀입니다.</p>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>내면에 적용하면</h5>
+        <p>한 주를 돌아볼 때 우리는 수많은 감정과 생각의 층위를 마주합니다. 불안, 피로, 타인의 시선, 의무감… 오컴의 면도칼은 이 과잉된 층위들을 하나씩 잘라내도록 합니다.</p>
+        <p style="margin-top:0.6rem;"><strong style="color:var(--text)">"이 감정은 정말 필요한가? 더 단순하게 설명할 수 있지 않은가?"</strong></p>
+        <p style="margin-top:0.6rem;">불필요한 감정의 소음을 걷어낸 자리에 남는 것 — 그것이 이 질문이 찾는 <strong style="color:var(--accent2)">진짜 내면의 동력</strong>입니다.</p>
+      </div>
+
+      <div class="entropy-modal-section">
+        <h5>이 질문에 답하는 방법</h5>
+        <div class="entropy-scale-guide">
+          <span class="eg-num">Step 1</span>
+          <span class="eg-desc">이번 주에 느낀 감정들을 떠올려 보세요. (불안, 설렘, 귀찮음, 두려움 등)</span>
+          <span class="eg-num">Step 2</span>
+          <span class="eg-desc">각 감정에 "이게 정말 필요한 감정인가?" 라고 물어보세요.</span>
+          <span class="eg-num">Step 3</span>
+          <span class="eg-desc">잘라낸 뒤 남은 가장 단순하고 순수한 욕구·동기를 찾으세요.</span>
+          <span class="eg-num">Step 4</span>
+          <span class="eg-desc">그것을 한 문장으로 표현하세요. (예: 인정받고 싶었다 / 그냥 쉬고 싶었다)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal-overlay" id="settingsModal" onclick="closeSettingsModal(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4>GitHub 저장 설정</h4>
+        <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+      </div>
+
+      <div class="entropy-modal-section">
+        <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.7">
+          저장 버튼을 누르면 GitHub 저장소의 <code style="color:var(--accent2)">index.html</code>을 직접 업데이트합니다.<br>
+          Personal Access Token은 이 기기의 브라우저에만 저장되며 파일에는 포함되지 않습니다.
+        </p>
+      </div>
+
+      <div class="settings-form">
+        <div class="settings-field">
+          <label>GitHub 사용자명</label>
+          <input type="text" id="cfg_owner" class="form-input" placeholder="username">
+        </div>
+        <div class="settings-field">
+          <label>저장소 이름</label>
+          <input type="text" id="cfg_repo" class="form-input" placeholder="repository-name">
+        </div>
+        <div class="settings-field">
+          <label>브랜치</label>
+          <input type="text" id="cfg_branch" class="form-input" placeholder="main">
+        </div>
+        <div class="settings-field">
+          <label>Personal Access Token
+            <span style="font-size:0.7rem;color:var(--text-muted);font-style:italic;margin-left:0.4rem">(Contents 쓰기 권한 필요)</span>
+          </label>
+          <input type="password" id="cfg_token" class="form-input" placeholder="ghp_xxxxxxxxxxxx">
+        </div>
+        <button class="save-btn" onclick="applySettingsConfig()">설정 저장</button>
+        <p class="save-feedback" id="settings-feedback" style="text-align:left"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visualization -->
+  <div class="view viz-page" id="vizView">
+    <div class="viz-header">
+      <h2>나의 심연 지도</h2>
+      <p>6주간의 기록으로 완성된 내면의 궤적</p>
+    </div>
+
+    <!-- 통계 -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-val" id="statTotal">0</div>
+        <div class="stat-label">기록된 주</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statAvgEntropy">—</div>
+        <div class="stat-label">평균 엔트로피</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statPeakWeek">—</div>
+        <div class="stat-label">최고 혼돈의 주</div>
+      </div>
+    </div>
+
+    <!-- 엔트로피 곡선 -->
+    <div class="viz-card viz-mb">
+      <h3>엔트로피 궤적 — 변화 흐름 분석</h3>
+      <div class="chart-wrap">
+        <canvas id="entropyChart"></canvas>
+      </div>
+      <div class="entropy-legend">
+        <span>완벽한 고요</span>
+        <div class="entropy-gradient"></div>
+        <span>심연의 붕괴</span>
+      </div>
+    </div>
+
+    <!-- 음악 형식 여정 -->
+    <div class="viz-card viz-mb">
+      <h3>음악적 형식 여정</h3>
+      <div id="musicTimeline"><div class="empty-state">아직 기록이 없습니다.</div></div>
+    </div>
+
+    <!-- 6주 심연 기록 카드 -->
+    <div class="section-label">주간 심연 기록</div>
+    <div class="journey-grid" id="journeyGrid"></div>
+
+    <!-- 내면의 동력 -->
+    <div class="viz-card viz-mb">
+      <h3>내면의 동력 — 추진력 패턴</h3>
+      <div id="drivePatterns"><div class="empty-state">아직 기록이 없습니다.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TOTAL_WEEKS = 6;
+
+  const MUSIC_FORMS = [
+    {
+      name: '칸타타 (Cantata)',
+      desc: '\'노래하다\'라는 뜻에서 유래했습니다. 독창, 합창, 기악이 어우러진 성악곡입니다.',
+      metaphor: '여러 사람과 협력하며 목소리를 내야 했던 한 주, 혹은 기승전결이 있는 이야기처럼 흘러간 일상에 어울립니다.',
+      keyword: '기승전결의 한 주',
+    },
+    {
+      name: '토카타 (Toccata)',
+      desc: '\'즉흥적이고 화려한 기교\'가 특징인 건반 음악입니다. 손가락을 아주 빠르게 움직여야 합니다.',
+      metaphor: '쉴 새 없이 몰아치는 업무나 과제를 기계적으로, 혹은 아주 능숙하게 처리해낸 한 주에 적합합니다.',
+      keyword: '바쁜 한 주',
+    },
+    {
+      name: '레퀴엠 (Requiem)',
+      desc: '죽은 이를 위한 \'진혼곡\'입니다. 장엄하고 경건하며 때로는 슬픈 분위기를 띱니다.',
+      metaphor: '무언가 소중한 프로젝트가 끝났거나, 깊은 성찰과 차분한 마무리가 필요했던 정적인 시간에 어울립니다.',
+      keyword: '마무리와 성찰의 한 주',
+    },
+    {
+      name: '소나타 (Sonata)',
+      desc: '제시부-발전부-재현부라는 엄격한 3단계 구조를 가집니다. 가장 전형적이고 클래식한 형식의 서정적인 음악입니다.',
+      metaphor: '외부 활동보다는 내면의 평화를 찾고, 조용히 사색하며 보낸 한 주.',
+      keyword: '사색의 한 주',
+    },
+    {
+      name: '임프롬프투 (Impromptu)',
+      desc: '악보 없이 즉석에서 연주하듯 자유로운 형식입니다.',
+      metaphor: '계획 없이 발길 닿는 대로 행동했거나, 순간순간의 직관에 따라 움직였던 한 주.',
+      keyword: '즉흥적인 한 주',
+    },
+    {
+      name: '푸가 (Fugue)',
+      desc: '하나의 주제가 여러 성부에서 복잡하게 얽히며 반복되는 형식입니다. 매우 논리적이고 수학적입니다.',
+      metaphor: '여러 가지 일을 동시에 처리해야 했던 한 주, 혹은 복잡한 문제를 논리적으로 풀어내야 했던 상황에 적합합니다.',
+      keyword: '멀티태스킹의 한 주',
+    },
+    {
+      name: '랩소디 (Rhapsody)',
+      desc: '형식이 자유롭고 환상적이며, 감정 기복이 화려한 곡입니다.',
+      metaphor: '예상치 못한 이벤트가 많았거나, 감정의 변화가 역동적이었던 자유로운 한 주.',
+      keyword: '역동적인 한 주',
+    },
+    {
+      name: '스케르초 (Scherzo)',
+      desc: '\'해학, 농담\'이라는 뜻으로, 빠르고 경쾌하며 리듬감이 통통 튑니다.',
+      metaphor: '유머러스하고 즐거운 에피소드가 많았거나, 가벼운 마음으로 경쾌하게 보낸 한 주.',
+      keyword: '경쾌한 한 주',
+    },
+    {
+      name: '서곡 (Overture)',
+      desc: '오페라나 연극이 시작되기 전 연주되는 도입 곡입니다.',
+      metaphor: '본격적인 일을 시작하기 전 준비 단계였거나, 새로운 시작을 앞두고 에너지를 응축했던 한 주.',
+      keyword: '준비의 한 주',
+    },
+  ];
+
+  /* __SAVED_DATA_BEGIN__ */
+  const SAVED_DATA = {};
+  /* __SAVED_DATA_END__ */
+
+  // ── GitHub config ──────────────────────────────────────────
+  // 발표 자료(공개) 저장소를 기본 대상으로 한다. 소스/백업용 private 저장소는 별도.
+  const GH_DEFAULTS = Object.freeze({
+    owner:  'wukong-daima',
+    repo:   'RequiemOfAbyss-presentation',
+    branch: 'main'
+  });
+  const GH_LEGACY_REPO = 'RequiemOfAbyss'; // private 전환된 기존 저장소
+
+  // 기존 브라우저에 남은 옛 저장소명을 새 발표 저장소명으로 1회 이전.
+  function migrateGithubConfig() {
+    if (localStorage.getItem('gh_repo') === GH_LEGACY_REPO) {
+      localStorage.setItem('gh_repo', GH_DEFAULTS.repo);
+    }
+  }
+
+  function loadGithubConfig() {
+    migrateGithubConfig();
+    return {
+      owner:  localStorage.getItem('gh_owner')  || GH_DEFAULTS.owner,
+      repo:   localStorage.getItem('gh_repo')   || GH_DEFAULTS.repo,
+      branch: localStorage.getItem('gh_branch') || GH_DEFAULTS.branch,
+      token:  localStorage.getItem('gh_token')  || ''
+    };
+  }
+
+  function saveGithubConfig({ owner, repo, branch, token }) {
+    localStorage.setItem('gh_owner',  owner);
+    localStorage.setItem('gh_repo',   repo);
+    localStorage.setItem('gh_branch', branch || 'main');
+    localStorage.setItem('gh_token',  token);
+  }
+
+  function b64decode(b64) {
+    const binary = atob(b64.replace(/\n/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function b64encode(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  async function writeSavedDataToFile() {
+    const cfg = loadGithubConfig();
+    if (!cfg.owner || !cfg.repo || !cfg.token) return { ok: false, msg: '설정 없음' };
+
+    const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/index.html`;
+    const headers = {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github+json'
+    };
+
+    try {
+      const getRes = await fetch(`${apiUrl}?ref=${cfg.branch}`, { headers });
+      if (!getRes.ok) {
+        const err = await getRes.json().catch(() => ({}));
+        return { ok: false, msg: `읽기 실패 ${getRes.status}: ${err.message || ''}` };
+      }
+      const getJson = await getRes.json();
+
+      let html = b64decode(getJson.content);
+      const indent = '  ';
+      const dataStr = JSON.stringify(SAVED_DATA, null, 2).replace(/\n/g, '\n' + indent);
+      const newBlock =
+        `/* __SAVED_DATA_BEGIN__ */\n${indent}const SAVED_DATA = ${dataStr};\n${indent}/* __SAVED_DATA_END__ */`;
+      html = html.replace(
+        /\/\* __SAVED_DATA_BEGIN__ \*\/[\s\S]*?\/\* __SAVED_DATA_END__ \*\//,
+        newBlock
+      );
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          message: 'update: abyss data',
+          content: b64encode(html),
+          sha: getJson.sha,
+          branch: cfg.branch
+        })
+      });
+      if (!putRes.ok) {
+        const err = await putRes.json().catch(() => ({}));
+        return { ok: false, msg: `쓰기 실패 ${putRes.status}: ${err.message || ''}` };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, msg: e.message };
+    }
+  }
+
+  // ── Data ──────────────────────────────────────────────────
+  function saveEntry(week, data) {
+    SAVED_DATA[`week_${week}`] = data;
+  }
+
+  function loadEntry(week) {
+    return SAVED_DATA[`week_${week}`] || null;
+  }
+
+  function getAllEntries() {
+    const entries = [];
+    for (let w = 1; w <= TOTAL_WEEKS; w++) {
+      const e = loadEntry(w);
+      if (e) entries.push({ week: w, ...e });
+    }
+    return entries;
+  }
+
+  // ── Build week views ──────────────────────────────────────
+  function buildWeekViews() {
+    const container = document.getElementById('weekViews');
+    container.innerHTML = '';
+
+    for (let w = 1; w <= TOTAL_WEEKS; w++) {
+      const data = loadEntry(w) || {};
+      const div = document.createElement('div');
+      div.className = `view week-view${w === 1 ? ' active' : ''}`;
+      div.id = `weekView${w}`;
+      div.innerHTML = `
+        <div class="week-form-card">
+          <p class="week-form-title">제 ${w}주 — 심연 기록</p>
+          <p class="week-form-desc">시그널 로그 · The Map of Abysses</p>
+
+          <div class="question-block">
+            <p class="question-label">1. 이번 주 나의 내면적 무질서도(엔트로피)는 얼마인가?<span class="required">*</span><button class="info-btn" onclick="openEntropyModal()" type="button" title="엔트로피 설명 보기">?</button></p>
+            <div class="entropy-scale">
+              <div class="scale-labels">
+                <span>완벽한 고요</span>
+                <span>심연의 붕괴</span>
+              </div>
+              <div class="scale-options">
+                ${[1,2,3,4,5,6,7,8,9,10].map(n => `
+                  <label class="scale-option">
+                    <input type="radio" name="entropy_w${w}" value="${n}"${data.entropy === n ? ' checked' : ''}>
+                    <span class="scale-dot">${n}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="question-block">
+            <p class="question-label">2. 이번 주 나의 삶의 흐름을 음악적 형식으로 비유한다면?<span class="required">*</span></p>
+            <div class="music-list">
+              ${MUSIC_FORMS.map(f => `
+                <label class="music-radio-label">
+                  <input type="radio" name="music_w${w}" value="${escHtmlAttr(f.name)}"${data.music === f.name ? ' checked' : ''}>
+                  <span class="music-check-box"></span>
+                  <span class="music-radio-text">
+                    <span class="music-radio-name">${escHtml(f.name)}</span>
+                    <span class="music-radio-desc">${escHtml(f.desc)}</span>
+                    <span class="music-keyword">${escHtml(f.keyword)}</span>
+                    <span class="music-radio-metaphor">${escHtml(f.metaphor)}</span>
+                  </span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="question-block">
+            <p class="question-label">3. 이번 주 나의 심연을 한 문장으로 정의해 주세요.<span class="required">*</span><button class="info-btn" onclick="openAbyssModal()" type="button" title="심연 정의 가이드 보기">?</button></p>
+            <p class="question-hint">(예: 시작을 미루는 불안의 늪이다. / 변화를 갈망하는 흔들림이다.)</p>
+            <textarea class="form-textarea" id="abyss_w${w}"
+                      placeholder="나의 심연을 정의하는 한 문장...">${escHtml(data.abyss || '')}</textarea>
+          </div>
+
+          <div class="question-block">
+            <p class="question-label">4. 오컴의 면도칼로 불필요한 감정을 처내고 새롭게 발견한 내면의 동력은 무엇입니까?<span class="required">*</span><button class="info-btn" onclick="openOccamModal()" type="button" title="오컴의 면도칼 설명 보기">?</button></p>
+            <p class="question-hint">(예: 성장하고 싶은 순수한 욕망이었다. / 일단 시작해보려는 용기였다.)</p>
+            <textarea class="form-textarea" id="drive_w${w}"
+                      placeholder="나의 내면의 동력을 기록하세요...">${escHtml(data.drive || '')}</textarea>
+          </div>
+
+          <button class="save-btn" onclick="saveWeek(${w})">기록 저장</button>
+          <p class="save-feedback" id="feedback_w${w}"></p>
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    updateNavDots();
+  }
+
+  // ── Save ──────────────────────────────────────────────────
+  async function saveWeek(week) {
+    const entropy   = document.querySelector(`input[name="entropy_w${week}"]:checked`);
+    const musicEl   = document.querySelector(`input[name="music_w${week}"]:checked`);
+    const music     = musicEl ? musicEl.value : '';
+    const abyss     = document.getElementById(`abyss_w${week}`).value.trim();
+    const drive     = document.getElementById(`drive_w${week}`).value.trim();
+
+    if (!entropy) {
+      showFeedback(week, '엔트로피 점수를 선택해 주세요.', '#e17055');
+      return;
+    }
+
+    saveEntry(week, {
+      entropy: parseInt(entropy.value),
+      music,
+      abyss,
+      drive,
+      savedAt: new Date().toISOString()
+    });
+
+    updateNavDots();
+
+    const cfg = loadGithubConfig();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      openSettingsModal();
+      showFeedback(week, 'GitHub 설정을 먼저 완료해 주세요', '#fdcb6e');
+      return;
+    }
+
+    showFeedback(week, '저장 중...', '#a29bfe');
+    const result = await writeSavedDataToFile();
+    showFeedback(
+      week,
+      result.ok ? '✦ GitHub에 저장되었습니다' : `✦ ${result.msg}`,
+      result.ok ? '#00cec9' : '#e17055'
+    );
+  }
+
+  function showFeedback(week, msg, color) {
+    const el = document.getElementById(`feedback_w${week}`);
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 3000);
+  }
+
+  function updateNavDots() {
+    for (let w = 1; w <= TOTAL_WEEKS; w++) {
+      const btn = document.querySelector(`.week-btn[data-week="${w}"]`);
+      if (!btn) continue;
+      btn.classList.toggle('has-entry', !!loadEntry(w));
+    }
+  }
+
+  // ── Navigation ────────────────────────────────────────────
+  function initNav() {
+    document.getElementById('weekNav').addEventListener('click', e => {
+      const btn = e.target.closest('.week-btn');
+      if (!btn) return;
+
+      document.querySelectorAll('.week-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+      if (btn.dataset.view === 'viz') {
+        document.getElementById('vizView').classList.add('active');
+        renderViz();
+      } else {
+        document.getElementById(`weekView${btn.dataset.week}`).classList.add('active');
+      }
+    });
+  }
+
+  // ── Visualization ─────────────────────────────────────────
+  let entropyChartInst = null;
+
+  function getEntropyColor(val) {
+    if (!val) return '#2a2a4a';
+    if (val <= 2) return '#00cec9';
+    if (val <= 4) return '#74b9ff';
+    if (val <= 6) return '#a29bfe';
+    if (val <= 8) return '#e17055';
+    return '#d63031';
+  }
+
+  function getMusicKeyword(name) {
+    const f = MUSIC_FORMS.find(m => m.name === name);
+    return f ? f.keyword : '';
+  }
+
+  function renderViz() {
+    const entries = getAllEntries();
+
+    // 통계
+    document.getElementById('statTotal').textContent = entries.length;
+    if (!entries.length) {
+      document.getElementById('statAvgEntropy').textContent = '—';
+      document.getElementById('statPeakWeek').textContent = '—';
+    } else {
+      const avg = entries.reduce((s, e) => s + (e.entropy || 0), 0) / entries.length;
+      document.getElementById('statAvgEntropy').textContent = avg.toFixed(1);
+      const peak = entries.reduce((a, b) => (b.entropy || 0) > (a.entropy || 0) ? b : a);
+      document.getElementById('statPeakWeek').textContent = `${peak.week}주`;
+    }
+
+    renderEntropyChart(entries);
+    renderMusicTimeline();
+    renderJourneyCards();
+    renderDrivePatterns(entries);
+  }
+
+  function renderEntropyChart(entries) {
+    const canvas = document.getElementById('entropyChart');
+    if (entropyChartInst) { entropyChartInst.destroy(); entropyChartInst = null; }
+    if (!entries.length) return;
+
+    const labels = Array.from({ length: TOTAL_WEEKS }, (_, i) => `${i+1}주`);
+    const data   = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+      const e = entries.find(x => x.week === i + 1);
+      return e ? e.entropy : null;
+    });
+    const pointColors = data.map(v => getEntropyColor(v));
+
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 210);
+    grad.addColorStop(0,   'rgba(209,99,49,0.35)');
+    grad.addColorStop(0.5, 'rgba(162,155,254,0.15)');
+    grad.addColorStop(1,   'rgba(0,206,201,0.03)');
+
+    entropyChartInst = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: '#a29bfe',
+          backgroundColor: grad,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: '#0f0f1e',
+          pointBorderWidth: 2,
+          pointRadius: data.map(v => v !== null ? 8 : 0),
+          pointHoverRadius: 10,
+          tension: 0.4,
+          fill: true,
+          spanGaps: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: c => c.parsed.y !== null ? `엔트로피 ${c.parsed.y}` : '미기록',
+              afterLabel: c => {
+                const e = loadEntry(c.dataIndex + 1);
+                return e && e.music ? `♩ ${e.music}` : '';
+              }
+            },
+            backgroundColor: '#161628',
+            borderColor: '#2a2a4a',
+            borderWidth: 1,
+            titleColor: '#a29bfe',
+            bodyColor: '#e8e8f0',
+          }
+        },
+        scales: {
+          y: {
+            min: 0, max: 10,
+            ticks: { color: '#7a7a9a', stepSize: 2 },
+            grid: { color: 'rgba(42,42,74,0.6)' }
+          },
+          x: {
+            ticks: { color: '#7a7a9a' },
+            grid: { color: 'rgba(42,42,74,0.25)' }
+          }
+        }
+      }
+    });
+  }
+
+  function renderMusicTimeline() {
+    const el = document.getElementById('musicTimeline');
+    const items = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+      const e = loadEntry(i + 1);
+      return { week: i + 1, entry: e };
+    });
+
+    const anyData = items.some(x => x.entry);
+    if (!anyData) {
+      el.innerHTML = '<div class="empty-state">아직 기록된 음악 형식이 없습니다.</div>';
+      return;
+    }
+
+    el.innerHTML = `<div class="music-timeline">
+      ${items.map(({ week, entry }) => `
+        <div class="mt-item">
+          <span class="mt-week">${week}주</span>
+          <span class="mt-dot${entry ? ' filled' : ''}"></span>
+          <div class="mt-line"></div>
+          ${entry && entry.music
+            ? `<span class="mt-form">${escHtml(entry.music.split(' (')[0])}</span>
+               <span class="mt-keyword">${escHtml(getMusicKeyword(entry.music))}</span>`
+            : `<span class="mt-empty">—</span>`}
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  function renderJourneyCards() {
+    const el = document.getElementById('journeyGrid');
+    el.innerHTML = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+      const w = i + 1;
+      const e = loadEntry(w);
+      if (!e) {
+        return `
+          <div class="jc" style="--entropy-color:var(--border)">
+            <div class="jc-empty">
+              <span class="jc-empty-week">${w}주</span>
+              <span class="jc-empty-msg">아직 기록되지 않은 주입니다</span>
+            </div>
+          </div>`;
+      }
+      const color = getEntropyColor(e.entropy);
+      const keyword = getMusicKeyword(e.music || '');
+      return `
+        <div class="jc has-data" style="--entropy-color:${color}">
+          <div class="jc-header">
+            <span class="jc-week-label">${w}주차</span>
+            <span class="jc-entropy" style="background:${color}">엔트로피 ${e.entropy || '—'}</span>
+          </div>
+          ${e.music ? `<div>
+            <span class="jc-music">${escHtml(e.music)}</span>
+            ${keyword ? `<span class="jc-keyword">${escHtml(keyword)}</span>` : ''}
+          </div>` : ''}
+          ${e.abyss ? `<div class="jc-abyss">${escHtml(e.abyss)}</div>` : ''}
+          ${e.drive ? `
+            <div class="jc-drive-label">내면의 동력</div>
+            <div class="jc-drive">${escHtml(e.drive)}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function renderDrivePatterns(entries) {
+    const el = document.getElementById('drivePatterns');
+    const drives = entries.filter(e => e.drive && e.drive.trim());
+    if (!drives.length) {
+      el.innerHTML = '<div class="empty-state">아직 기록된 추진력이 없습니다.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="drive-pattern-list">
+      ${drives.map(e => `
+        <div class="dp-item">
+          <div class="dp-week">${e.week}주차</div>
+          <div class="dp-text">${escHtml(e.drive)}</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escHtmlAttr(str) {
+    return escHtml(str).replace(/'/g,'&#39;');
+  }
+
+  // ── Modal helpers ─────────────────────────────────────────
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal(id, e) {
+    if (e && e.target !== document.getElementById(id)) return;
+    document.getElementById(id).classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function openEntropyModal()   { openModal('entropyModal'); }
+  function closeEntropyModal(e) { closeModal('entropyModal', e); }
+  function openAbyssModal()     { openModal('abyssModal'); }
+  function closeAbyssModal(e)   { closeModal('abyssModal', e); }
+  function openOccamModal()     { openModal('occamModal'); }
+  function closeOccamModal(e)   { closeModal('occamModal', e); }
+
+  function openSettingsModal() {
+    const cfg = loadGithubConfig();
+    document.getElementById('cfg_owner').value  = cfg.owner;
+    document.getElementById('cfg_repo').value   = cfg.repo;
+    document.getElementById('cfg_branch').value = cfg.branch;
+    document.getElementById('cfg_token').value  = cfg.token;
+    openModal('settingsModal');
+  }
+  function closeSettingsModal(e) { closeModal('settingsModal', e); }
+
+  function applySettingsConfig() {
+    const owner  = document.getElementById('cfg_owner').value.trim();
+    const repo   = document.getElementById('cfg_repo').value.trim();
+    const branch = document.getElementById('cfg_branch').value.trim() || 'main';
+    const token  = document.getElementById('cfg_token').value.trim();
+
+    if (!owner || !repo || !token) {
+      const fb = document.getElementById('settings-feedback');
+      fb.textContent = '사용자명, 저장소, 토큰은 필수입니다.';
+      fb.style.color = '#e17055';
+      fb.style.opacity = '1';
+      return;
+    }
+    saveGithubConfig({ owner, repo, branch, token });
+    closeSettingsModal();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeEntropyModal();
+      closeAbyssModal();
+      closeOccamModal();
+      closeSettingsModal();
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  buildWeekViews();
+  initNav();
+</script>
+</body>
+</html>
