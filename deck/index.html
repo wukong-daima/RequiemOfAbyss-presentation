@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Map of Abysses — 시그널 로그 · 손재완</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --void:#0a0a14;
+    --void-2:#0d0d1c;
+    --ink:#13132a;
+    --ink-2:#171734;
+    --line:#26264a;
+    --line-soft:#1c1c3a;
+    --gold:#e8b962;
+    --gold-dim:#9a7e3e;
+    --text:#ececf4;
+    --muted:#9494b4;
+    --muted-2:#6a6a8c;
+    /* entropy spectrum */
+    --e-calm:#3fd6c8;
+    --e-low:#5aa9ff;
+    --e-mid:#a78bfa;
+    --e-high:#f08a5d;
+    --e-peak:#e85a6b;
+    --serif:'Fraunces',serif;
+    --batang:'Gowun Batang',serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--void);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── Deck scaffold ─────────────────────────────────────── */
+  .deck{position:fixed;inset:0;overflow:hidden;
+    background:
+      radial-gradient(120% 80% at 78% -10%, rgba(232,185,98,0.07), transparent 55%),
+      radial-gradient(90% 90% at 12% 110%, rgba(90,109,231,0.08), transparent 60%),
+      var(--void);
+  }
+  /* 어떤 화면비에서도 정중앙: 좌상단 50%에 두고 자기 절반만큼 당겨 스케일 */
+  .stage{
+    position:absolute;top:50%;left:50%;width:1280px;height:720px;
+    transform:translate(-50%,-50%) scale(var(--s,1));
+    transform-origin:center center;
+  }
+
+  .slide{
+    position:absolute;inset:0;
+    padding:62px 76px 56px;
+    display:none;
+    background:
+      radial-gradient(130% 90% at 82% -15%, rgba(232,185,98,0.05), transparent 50%),
+      linear-gradient(180deg,var(--void-2),var(--void));
+    overflow:hidden;
+  }
+  .slide.active{display:block}
+
+  /* depth-sounding contour motif (shared background) */
+  .contours{position:absolute;inset:0;pointer-events:none;opacity:.5;}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.035;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  /* footer */
+  .foot{position:absolute;left:76px;right:76px;bottom:26px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;letter-spacing:.14em;color:var(--muted-2);
+    border-top:1px solid var(--line-soft);padding-top:12px;text-transform:uppercase;}
+  .foot .r{display:flex;gap:18px;align-items:center}
+  .foot .pg{color:var(--gold-dim);font-family:var(--serif);font-size:12px;letter-spacing:.05em}
+
+  /* staggered reveal */
+  .slide.active [data-rise]{animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+  .slide.active [data-rise="2"]{animation-delay:.12s}
+  .slide.active [data-rise="3"]{animation-delay:.24s}
+  .slide.active [data-rise="4"]{animation-delay:.36s}
+  .slide.active [data-rise="5"]{animation-delay:.5s}
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+  /* ── Cover (slide 1) ───────────────────────────────────── */
+  .cover .kicker{font-family:var(--serif);font-style:italic;font-size:15px;
+    color:var(--gold);letter-spacing:.04em;margin-bottom:18px}
+  .cover h1{font-family:var(--serif);font-weight:500;font-size:84px;line-height:.98;
+    letter-spacing:-.015em;color:var(--text);margin-bottom:20px}
+  .cover h1 .em{font-style:italic;color:var(--gold)}
+  .cover .sub{font-family:var(--batang);font-size:26px;color:#d8d8ea;letter-spacing:.01em}
+  .cover .rule{width:74px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:26px 0 18px}
+  .cover .tag{font-size:14px;letter-spacing:.34em;color:var(--muted);text-transform:uppercase}
+
+  .who{position:absolute;right:76px;bottom:96px;text-align:right}
+  .who .row{display:flex;justify-content:flex-end;gap:14px;align-items:baseline;margin-bottom:10px}
+  .who .lab{font-size:12px;letter-spacing:.3em;color:var(--muted-2);text-transform:uppercase}
+  .who .val{font-family:var(--batang);font-size:22px;color:#e6e6f2}
+  .who .val.mono{font-family:var(--serif);letter-spacing:.02em}
+
+  /* the signature sounding arc */
+  .arc{position:absolute;top:-160px;right:-120px;width:620px;height:620px;
+    border:1.5px solid var(--gold);border-radius:50%;
+    -webkit-mask:linear-gradient(215deg,#000 0 40%,transparent 62%);
+            mask:linear-gradient(215deg,#000 0 40%,transparent 62%);
+    opacity:.55}
+  .spark{position:absolute;left:76px;bottom:150px;opacity:.9}
+
+  /* ── Section header (shared) ───────────────────────────── */
+  .head{margin-bottom:30px}
+  .head .step{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--gold);
+    letter-spacing:.03em;margin-bottom:8px}
+  .head h2{font-family:var(--batang);font-weight:700;font-size:44px;color:var(--text);
+    letter-spacing:-.01em;line-height:1.05}
+  .head .desc{margin-top:12px;font-size:16px;color:var(--muted);letter-spacing:.01em}
+  .head .barline{margin-top:18px;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+  /* ── Data table (slide 4) ──────────────────────────────── */
+  .ledger{width:100%;border-collapse:collapse;font-size:16px}
+  .ledger thead th{font-family:var(--sans);font-weight:600;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--muted-2);text-align:left;padding:0 16px 14px;border-bottom:1px solid var(--line)}
+  .ledger thead th.c{text-align:center}
+  .ledger tbody tr{border-bottom:1px solid var(--line-soft);transition:background .25s}
+  .ledger tbody tr:hover{background:rgba(232,185,98,0.03)}
+  .ledger td{padding:15px 16px;vertical-align:middle;color:#dcdcec}
+  .wk{font-family:var(--serif);font-size:19px;color:var(--text)}
+  .wk small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;
+    color:var(--muted-2);margin-top:2px;text-transform:uppercase}
+  .ent{display:flex;align-items:center;justify-content:center;gap:10px}
+  .ent .dot{width:11px;height:11px;border-radius:50%;box-shadow:0 0 12px var(--c)}
+  .ent .n{font-family:var(--serif);font-size:22px;color:var(--text)}
+  .kw{color:var(--muted)}
+  .form{font-family:var(--batang);color:#e6e6f2}
+  .form span{display:block;font-family:var(--serif);font-style:italic;font-size:12px;color:var(--gold-dim)}
+  .line-q{font-family:var(--batang);color:#cfcfe2;font-size:15px}
+
+  /* nav */
+  .nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:16px;z-index:20;
+    background:rgba(12,12,26,.7);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:100px;padding:8px 16px}
+  .nav button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;
+    width:30px;height:30px;border-radius:50%;transition:all .2s;display:grid;place-items:center}
+  .nav button:hover{color:var(--gold);background:rgba(232,185,98,.1)}
+  .nav .count{font-family:var(--serif);font-size:13px;color:var(--muted);letter-spacing:.1em;min-width:54px;text-align:center}
+  .nav .count b{color:var(--gold);font-weight:500}
+  .hint{position:fixed;top:18px;right:20px;font-size:11px;letter-spacing:.16em;color:var(--muted-2);
+    text-transform:uppercase;z-index:20}
+
+  /* ── Overview (slide 2) ────────────────────────────────── */
+  .tri{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:6px}
+  .pcard{background:linear-gradient(180deg,var(--ink),var(--void-2));border:1px solid var(--line);
+    border-radius:16px;padding:30px 28px;min-height:300px;position:relative;overflow:hidden}
+  .pcard::before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;
+    background:linear-gradient(90deg,var(--accent,var(--gold)),transparent)}
+  .pcard .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;
+    padding:5px 12px;border-radius:6px;color:#0a0a14;margin-bottom:22px}
+  .tag-data{background:#5aa9ff}.tag-theory{background:#a78bfa}.tag-art{background:var(--gold)}
+  .pcard h3{font-family:var(--batang);font-size:30px;font-weight:700;margin-bottom:16px;color:var(--text)}
+  .pcard p{font-size:16px;line-height:1.75;color:var(--muted)}
+
+  /* ── Capture (slide 3) ─────────────────────────────────── */
+  .cap-wrap{display:grid;grid-template-columns:0.85fr 1fr;gap:48px;align-items:center;margin-top:6px}
+  .cap-shot{border:1px solid var(--line);border-radius:14px;overflow:hidden;max-height:430px;
+    box-shadow:0 30px 60px rgba(0,0,0,.5)}
+  .cap-shot img{display:block;width:100%;object-fit:cover;object-position:top}
+  .cap-q{list-style:none;counter-reset:q}
+  .cap-q li{counter-increment:q;position:relative;padding:18px 0 18px 52px;font-family:var(--batang);
+    font-size:19px;color:#dcdcec;border-bottom:1px solid var(--line-soft)}
+  .cap-q li::before{content:counter(q,decimal-leading-zero);position:absolute;left:0;top:18px;
+    font-family:var(--serif);font-style:italic;font-size:18px;color:var(--gold)}
+
+  /* ── Chart (slide 5) ───────────────────────────────────── */
+  .chart-wrap{display:grid;grid-template-columns:1.4fr 1fr;gap:40px;align-items:center;margin-top:6px}
+  .chart-box{height:380px;background:linear-gradient(180deg,var(--ink),var(--void-2));
+    border:1px solid var(--line);border-radius:16px;padding:22px}
+  .read h4{font-family:var(--serif);font-style:italic;color:var(--gold);font-size:18px;margin-bottom:14px}
+  .read ul{list-style:none;margin-bottom:20px}
+  .read li{position:relative;padding:8px 0 8px 18px;font-size:16px;line-height:1.6;color:#dcdcec}
+  .read li::before{content:"—";position:absolute;left:0;color:var(--gold-dim)}
+  .read .key{font-family:var(--batang);font-size:16px;line-height:1.7;color:var(--muted);
+    border-left:2px solid var(--gold-dim);padding-left:16px}
+
+  /* ── SmartArt (slide 6) ────────────────────────────────── */
+  .chev-row{display:flex;gap:14px;margin-top:30px}
+  .chev{flex:1;height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--c);color:#0a0a14;position:relative;
+    clip-path:polygon(0 0,calc(100% - 28px) 0,100% 50%,calc(100% - 28px) 100%,0 100%,28px 50%)}
+  .chev:first-child{clip-path:polygon(0 0,calc(100% - 28px) 0,100% 50%,calc(100% - 28px) 100%,0 100%)}
+  .chev h5{font-family:var(--batang);font-weight:700;font-size:23px}
+  .chev small{font-size:12px;letter-spacing:.06em;opacity:.8;margin-top:3px}
+  .chev-caps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+  .chev-caps span{text-align:center;font-size:14px;color:var(--muted);line-height:1.5}
+  .pull{text-align:center;font-family:var(--batang);font-weight:700;font-size:24px;color:var(--gold);
+    margin-top:54px;letter-spacing:.01em}
+
+  /* ── Music (slide 7) ───────────────────────────────────── */
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:6px}
+  .mform{background:linear-gradient(180deg,var(--ink),var(--void-2));border:1px solid var(--line);
+    border-left:3px solid var(--c,var(--gold));border-radius:12px;padding:18px 20px;min-height:150px}
+  .mform .mtag{display:block;font-family:var(--batang);font-weight:700;font-size:21px;color:#fff;margin-bottom:12px}
+  .mform .mtag i{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--c,var(--gold))}
+  .mform p{font-size:14.5px;line-height:1.65;color:var(--muted)}
+  .mform p b{color:var(--gold-dim);font-weight:600}
+  .mnote{text-align:center;font-family:var(--batang);font-size:17px;color:#cfcfe2;margin-top:26px}
+
+  /* ── Theory (slides 8-10) ──────────────────────────────── */
+  .thy{max-width:1000px;margin-top:10px}
+  .thy .q{font-family:var(--batang);font-weight:700;font-size:25px;color:var(--gold);
+    line-height:1.4;margin-bottom:24px}
+  .thy .b{font-family:var(--batang);font-size:21px;line-height:1.95;color:#dcdcec}
+  .thy .b em{font-style:normal;color:#fff;border-bottom:1px solid var(--gold-dim);padding-bottom:1px}
+
+  /* ── Sentence (slide 11) ───────────────────────────────── */
+  .epi{font-family:var(--serif);font-style:italic;font-size:24px;color:#d8d8ea;margin-top:8px;line-height:1.5}
+  .epi span{display:block;font-family:var(--batang);font-style:normal;font-size:15px;color:var(--muted);margin-top:8px}
+  .lead-s{font-family:var(--batang);font-size:18px;color:var(--muted);margin:40px 0 22px}
+  .self-s{font-family:var(--batang);font-weight:700;font-size:38px;line-height:1.55;color:#fff;
+    border-left:3px solid var(--gold);padding-left:28px;max-width:980px}
+
+  /* ── Conclusion (slide 12) ─────────────────────────────── */
+  .conc{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;margin-top:10px}
+  .conc-col h4{font-family:var(--serif);font-style:italic;color:var(--gold);font-size:20px;margin-bottom:16px}
+  .conc-col p{font-family:var(--batang);font-size:19px;line-height:1.85;color:#dcdcec}
+  .conc-col ol{padding-left:4px;list-style:none;counter-reset:c}
+  .conc-col li{counter-increment:c;position:relative;padding:10px 0 10px 36px;font-family:var(--batang);
+    font-size:18px;line-height:1.65;color:#dcdcec}
+  .conc-col li::before{content:counter(c);position:absolute;left:0;top:10px;width:24px;height:24px;
+    border:1px solid var(--gold-dim);border-radius:50%;color:var(--gold);font-family:var(--serif);
+    font-size:13px;display:grid;place-items:center}
+  .closing{text-align:center;font-family:var(--batang);font-weight:700;font-size:23px;color:var(--gold);margin-top:46px}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="stage" id="stage">
+
+    <!-- ── SLIDE 1 · COVER ───────────────────────────────── -->
+    <section class="slide cover active">
+      <svg class="contours" viewBox="0 0 1280 720" preserveAspectRatio="none">
+        <g fill="none" stroke="#5a6de7" stroke-opacity="0.10" stroke-width="1">
+          <path d="M-50,540 C260,470 420,610 640,540 C880,465 1040,600 1340,520"/>
+          <path d="M-50,600 C260,535 430,665 660,595 C900,525 1060,650 1340,575"/>
+          <path d="M-50,660 C280,600 440,710 670,650 C910,590 1080,700 1340,630"/>
+        </g>
+      </svg>
+      <div class="arc"></div>
+      <svg class="spark" width="220" height="70" viewBox="0 0 220 70" fill="none">
+        <polyline points="0,45 40,38 80,8 120,24 160,46 200,32" stroke="#e8b962" stroke-opacity=".7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="80" cy="8" r="3.5" fill="#e85a6b"/>
+      </svg>
+      <div class="grain"></div>
+
+      <div style="padding-top:78px">
+        <p class="kicker" data-rise>An archive of the inner abyss</p>
+        <h1 data-rise="2">The Map of <span class="em">Abysses</span></h1>
+        <p class="sub" data-rise="3">시그널 로그 — 6주 개인 아카이브 프로젝트</p>
+        <div class="rule" data-rise="3"></div>
+        <p class="tag" data-rise="4">철학 · 심연 · 엔트로피 · 음악적 형상화</p>
+      </div>
+
+      <div class="who" data-rise="5">
+        <div class="row"><span class="lab">학번</span><span class="val mono">2025451047</span></div>
+        <div class="row"><span class="lab">전공</span><span class="val">융합인문공학</span></div>
+        <div class="row"><span class="lab">성명</span><span class="val">손재완</span></div>
+      </div>
+
+      <div class="foot">
+        <span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">01</span></span>
+      </div>
+    </section>
+
+    <!-- ── SLIDE 2 · OVERVIEW ────────────────────────────── -->
+    <section class="slide overview">
+      <svg class="contours" viewBox="0 0 1280 720" preserveAspectRatio="none">
+        <g fill="none" stroke="#5a6de7" stroke-opacity="0.06" stroke-width="1">
+          <path d="M-50,150 C300,110 460,210 700,160 C940,110 1100,210 1340,150"/>
+        </g>
+      </svg>
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>The project at a glance</p>
+        <h2 data-rise="2">전체 구성 — 프로젝트의 핵심</h2>
+        <p class="desc" data-rise="2">단순한 감상문이 아니라, 나의 감정 데이터를 해석하는 개인 아카이브.</p>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="tri" data-rise="4">
+        <article class="pcard"><span class="tag tag-data">DATA</span><h3>기록</h3>
+          <p>6주간 내면의 무질서도, 감정 키워드, 회복의 순간을 꾸준히 축적한다.</p></article>
+        <article class="pcard"><span class="tag tag-theory">THEORY</span><h3>분석</h3>
+          <p>스피노자·니체·자기조직화(엔트로피) 개념으로 나의 데이터를 해석한다.</p></article>
+        <article class="pcard"><span class="tag tag-art">ART</span><h3>형상화</h3>
+          <p>음악적 형식과 문장으로 내면의 흐름을 하나의 작품처럼 시각화한다.</p></article>
+      </div>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">02</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 3 · SIGNAL LOG CAPTURE ──────────────────── -->
+    <section class="slide capture">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Accumulated signal · capture</p>
+        <h2 data-rise="2">시그널 로그 축적 결과</h2>
+        <p class="desc" data-rise="2">기록 도구는 구글폼이 아니라, 직접 만든 인터랙티브 웹 아카이브다.</p>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="cap-wrap">
+        <figure class="cap-shot" data-rise="4"><img src="assets/signal-log.png" alt="시그널 로그 앱 화면"></figure>
+        <ol class="cap-q" data-rise="5">
+          <li>이번 주 나의 내면적 무질서도(엔트로피)는 얼마인가?</li>
+          <li>이번 주 나의 삶의 흐름을 음악적 형식으로 비유한다면?</li>
+          <li>이번 주 나의 심연을 한 문장으로 정의한다면?</li>
+          <li>오컴의 면도칼로 불필요한 감정을 제거한 뒤 남은 동력은 무엇인가?</li>
+        </ol>
+      </div>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">03</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 4 · 6-WEEK DATA LEDGER ──────────────────── -->
+    <section class="slide data">
+      <svg class="contours" viewBox="0 0 1280 720" preserveAspectRatio="none">
+        <g fill="none" stroke="#5a6de7" stroke-opacity="0.07" stroke-width="1">
+          <path d="M-50,640 C300,590 460,700 700,650 C940,600 1100,700 1340,640"/>
+        </g>
+      </svg>
+      <div class="grain"></div>
+
+      <div class="head">
+        <p class="step" data-rise>Stage 1 · Accumulated signal</p>
+        <h2 data-rise="2">6주 데이터 — 나의 시그널 로그</h2>
+        <p class="desc" data-rise="2">기록은 감정의 진폭을 숫자와 언어로 동시에 드러낸다.</p>
+        <div class="barline" data-rise="3"></div>
+      </div>
+
+      <table class="ledger" data-rise="4">
+        <thead>
+          <tr>
+            <th>주차</th><th class="c">엔트로피</th><th>감정 키워드</th><th>음악 형식</th><th>핵심 문장</th>
+          </tr>
+        </thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+
+      <div class="foot">
+        <span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">04</span></span>
+      </div>
+    </section>
+
+    <!-- ── SLIDE 5 · ENTROPY CHART ───────────────────────── -->
+    <section class="slide chart">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 1 · The curve</p>
+        <h2 data-rise="2">엔트로피 변화 그래프</h2>
+        <p class="desc" data-rise="2">숫자는 감정의 깊이를 다 설명하지 못하지만, 변화의 방향을 보여준다.</p>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-box" data-rise="4"><canvas id="entropyCanvas"></canvas></div>
+        <aside class="read" data-rise="5">
+          <h4>해석</h4>
+          <ul>
+            <li>3주차, 엔트로피 최고점(9) — 가장 가까운 관계의 균열</li>
+            <li>4주차부터 감정의 명명과 정리 시작 — 화해의 노력</li>
+            <li>5–6주차, '마무리'의 결의로 고요(5)와 밀도(6) 사이에서 안정</li>
+          </ul>
+          <p class="key">핵심: 그래프를 붙이는 데서 끝나지 않고, 왜 그 지점에서 오르내렸는지를 서사화한다.</p>
+        </aside>
+      </div>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">05</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 6 · SMARTART ────────────────────────────── -->
+    <section class="slide smart">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 1 · Self-organization</p>
+        <h2 data-rise="2">엔트로피의 자기조직화 — 흐름도</h2>
+        <p class="desc" data-rise="2">도형만으로도 감정이 질서를 찾아가는 과정을 시각화할 수 있다.</p>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="chev-row" data-rise="4">
+        <div class="chev" style="--c:#e85a6b"><h5>무질서</h5><small>고엔트로피</small></div>
+        <div class="chev" style="--c:#f0a04b"><h5>신호 감지</h5><small>패턴 발견</small></div>
+        <div class="chev" style="--c:#5aa9ff"><h5>자기조직화</h5><small>구조 형성</small></div>
+        <div class="chev" style="--c:#3fd6c8"><h5>형상화</h5><small>예술적 질서</small></div>
+      </div>
+      <div class="chev-caps" data-rise="5">
+        <span>감정이 이름 없이 요동침</span><span>반복되는 감정·상황을 포착</span>
+        <span>혼돈이 리듬과 방향을 얻음</span><span>음악·문장으로 전환</span>
+      </div>
+      <p class="pull" data-rise="5">"혼돈을 없애는 것이 아니라, 혼돈 안의 신호를 찾아 형식으로 만드는 과정."</p>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">06</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 7 · MUSICAL FORMS ───────────────────────── -->
+    <section class="slide music">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 2 · Forms of feeling</p>
+        <h2 data-rise="2">음악적 형식으로 감정을 분류하다</h2>
+        <p class="desc" data-rise="2">음악은 감정의 속도·압력·리듬·회복 방식을 보여주는 언어가 된다.</p>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="mgrid" data-rise="4">
+        <article class="mform"><span class="mtag" style="--c:#a78bfa">푸가 <i>Fugue</i></span>
+          <p><b>1주차</b> · 여러 성부가 얽히는 구조 — 복직·공연·과제를 동시에 끌어안은 멀티태스킹.</p></article>
+        <article class="mform"><span class="mtag" style="--c:#a78bfa">칸타타 <i>Cantata</i></span>
+          <p><b>2주차</b> · 여러 목소리가 기승전결로 어우러짐 — 갈등을 중재하며 사람들 사이 목소리를 전달.</p></article>
+        <article class="mform"><span class="mtag" style="--c:#e85a6b">랩소디 <i>Rhapsody</i></span>
+          <p><b>3주차</b> · 형식이 자유롭고 감정 기복이 화려 — 다툼의 격동, 정점의 흔들림.</p></article>
+        <article class="mform"><span class="mtag" style="--c:#f08a5d">소나타 <i>Sonata</i></span>
+          <p><b>4주차</b> · 제시–발전–재현의 회복 구조 — 갈등(발전부)에서 화해(재현부)로.</p></article>
+        <article class="mform"><span class="mtag" style="--c:#a78bfa">서곡 <i>Overture</i></span>
+          <p><b>5주차</b> · 무대를 앞둔 에너지 응축 — 마지막 기행을 위한 결의의 준비.</p></article>
+        <article class="mform"><span class="mtag" style="--c:#a78bfa">토카타 <i>Toccata</i></span>
+          <p><b>6주차</b> · 몰아치는 기교를 능숙하게 처리 — 시험·과제·마무리의 고밀도.</p></article>
+      </div>
+      <p class="mnote" data-rise="5">선택의 핵심은 형식의 이름이 아니라, 그 형식이 그 주의 데이터와 왜 맞닿는지에 있다.</p>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">07</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 8 · SPINOZA ─────────────────────────────── -->
+    <section class="slide theory">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 3 · Theory ①</p>
+        <h2 data-rise="2">스피노자 — 행위역량(conatus)</h2>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="thy" data-rise="4">
+        <p class="q">엔트로피가 치솟은 주차에 나의 행위역량은 어떻게 무너졌는가?</p>
+        <p class="b">스피노자에게 <em>기쁨은 행위역량(자신을 보존하려는 힘, conatus)의 증대</em>이고, 슬픔은 그 감소다. 3주차, 가장 가까운 사람과의 다툼으로 나의 엔트로피는 9까지 치솟았다. 이는 단순한 기분이 아니라 무언가를 시작할 힘조차 줄어든 역량의 급감이었다. 그러나 4주차, 회피 대신 대화를 택하자 역량은 회복되기 시작했다(7). <em>나의 엔트로피 곡선은 곧 행위역량의 그래프였다</em> — 관계 속에서 나의 힘은 줄고, 또 늘었다.</p>
+      </div>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">08</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 9 · NIETZSCHE ───────────────────────────── -->
+    <section class="slide theory">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 3 · Theory ②</p>
+        <h2 data-rise="2">니체 — 자기극복 · 아모르파티</h2>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="thy" data-rise="4">
+        <p class="q">고통을 통과한 힘은 새로운 가치로 전환될 수 있는가?</p>
+        <p class="b">니체는 인간을 <em>'극복되어야 할 무엇'</em>으로 보았고, 고통을 제거 대상이 아니라 자기를 넘어서는 출발점으로 읽었다. 3주차의 균열은 나를 무너뜨리기만 한 것이 아니라, 내가 무엇을 견딜 수 있는 사람인지 확인하게 했다. 그 통과의 경험은 5주차 '마지막 과업을 잘 마무리하겠다'는 결의와 6주차의 '끝과 시작을 동시에 짊어지는' 밀도로 이어졌다. <em>나는 다툼을 후회로 남기지 않고, 그것을 운명으로 끌어안아(amor fati) 다음 동력으로 바꾸었다.</em></p>
+      </div>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">09</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 10 · SELF-ORGANIZATION ──────────────────── -->
+    <section class="slide theory">
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 3 · Theory ③</p>
+        <h2 data-rise="2">자기조직화 — 엔트로피와 형식(공학)</h2>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="thy" data-rise="4">
+        <p class="q">혼돈은 어떻게 스스로 질서를 만드는가?</p>
+        <p class="b">열역학에서 엔트로피는 무질서의 척도다. 복잡계는 고엔트로피 상태에서 외부와 에너지를 주고받으며 스스로 패턴을 만들어낸다 — <em>자기조직화</em>. 나의 6주는 정확히 이 과정이었다. 3주차의 무질서(엔트로피 9)는 사라지지 않았다. 대신 나는 그 혼돈 속에서 반복되는 신호 — 책임감, 관계를 지키려는 의지 — 를 감지했고, 그것을 음악적 형식(랩소디→소나타→토카타)이라는 질서로 수렴시켰다. <em>융합인문공학도로서 나는 감정을 '없애야 할 노이즈'가 아니라 '형식을 찾아야 할 신호'로 다루었다.</em></p>
+      </div>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">10</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 11 · THE SENTENCE ───────────────────────── -->
+    <section class="slide sentence">
+      <svg class="contours" viewBox="0 0 1280 720" preserveAspectRatio="none">
+        <g fill="none" stroke="#e8b962" stroke-opacity="0.12" stroke-width="1.2">
+          <path d="M720,40 A360,360 0 0 1 1080,400"/>
+        </g>
+      </svg>
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Stage 4 · The sentence</p>
+        <h2 data-rise="2">나의 심연을 정의하는 문장</h2>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <p class="epi" data-rise="4">"And when you gaze long into an abyss, the abyss also gazes into you."<span>심연을 오래 들여다보면, 심연도 너를 들여다본다. — 니체</span></p>
+      <p class="lead-s" data-rise="5">나는 6주간 나의 심연을 들여다보았고, 거기서 나를 마주 보는 한 문장을 건졌다.</p>
+      <blockquote class="self-s" data-rise="5">나의 심연은 무너짐이 아니라,<br>무너진 자리에서도 끝내 책임과 사랑을 놓지 않으려는 힘이었다.</blockquote>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">11</span></span></div>
+    </section>
+
+    <!-- ── SLIDE 12 · CONCLUSION ─────────────────────────── -->
+    <section class="slide conclusion">
+      <div class="arc" style="opacity:.4"></div>
+      <div class="grain"></div>
+      <div class="head">
+        <p class="step" data-rise>Conclusion</p>
+        <h2 data-rise="2">내가 발견한 동력과 다음 움직임</h2>
+        <div class="barline" data-rise="3"></div>
+      </div>
+      <div class="conc" data-rise="4">
+        <div class="conc-col"><h4>발견한 내면의 동력</h4>
+          <p>책임감, 관계를 지키려는 사랑, 끝까지 마무리하려는 성실함 — 혼돈의 주차마다 반복해 나타난 이 세 신호가 나를 다시 일으킨 동력이었다.</p></div>
+        <div class="conc-col"><h4>다음 움직임</h4>
+          <ol>
+            <li>엔트로피가 치솟기 전에 '신호'를 먼저 기록한다 — 예방적 자기관찰.</li>
+            <li>갈등을 회피하지 않고 대화로 역량을 회복하는 패턴을 의식적으로 반복한다.</li>
+            <li>과대 임기 이후에도, 감정을 형식으로 옮기는 이 아카이브를 이어간다.</li>
+          </ol></div>
+      </div>
+      <p class="closing" data-rise="5">기록은 나를 설명하는 데이터가 되고, 해석은 나를 움직이게 하는 힘이 된다.</p>
+      <div class="foot"><span>The Map of Abysses · Signal Log</span>
+        <span class="r"><span>2026 연세대학교 · 융합인문공학</span><span class="pg">12</span></span></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="hint">← → 또는 스페이스 · F 전체화면</div>
+<nav class="nav">
+  <button id="prev" aria-label="이전">‹</button>
+  <span class="count"><b id="cur">1</b> / <span id="total">2</span></span>
+  <button id="next" aria-label="다음">›</button>
+</nav>
+
+<script>
+  // ── 6주 실제 데이터 ──────────────────────────────────────
+  const WEEKS = [
+    {w:1,range:'5월 둘째주',entropy:5,kw:'적응 · 분주',form:'푸가',formEn:'Fugue',line:'여러 갈래의 책임을 동시에 끌어안고도 가라앉지 않으려는 단단한 분주함.'},
+    {w:2,range:'5월 셋째주',entropy:6,kw:'중재 · 찝찝',form:'칸타타',formEn:'Cantata',line:'타인의 갈등을 대신 짊어지고 매듭짓느라 정작 내 감정은 정리하지 못한 찝찝함.'},
+    {w:3,range:'5월 넷째주',entropy:9,kw:'혼돈 · 균열',form:'랩소디',formEn:'Rhapsody',line:'가장 가까운 사람과 어긋난 자리에서 속절없이 무너져 내리는 흔들림.'},
+    {w:4,range:'5월 다섯째주',entropy:7,kw:'회복 · 소진',form:'소나타',formEn:'Sonata',line:'무너진 자리를 다시 쌓아 올리려 남은 힘까지 쥐어짜내는 안간힘.'},
+    {w:5,range:'6월 첫째주',entropy:5,kw:'결의 · 마무리',form:'서곡',formEn:'Overture',line:'한 학기의 애정을 마지막 무대에 쏟아붓기 위해 아쉬움마저 결의로 끌어안는 분주함.'},
+    {w:6,range:'6월 둘째주',entropy:6,kw:'통찰 · 전환',form:'토카타',formEn:'Toccata',line:'한 시기를 매듭짓고 다음으로 건너가기 위해 모든 에너지를 쏟아내는 밀도.'},
+  ];
+  function entColor(v){
+    if(v<=2)return getComputedStyle(document.documentElement).getPropertyValue('--e-calm');
+    if(v<=4)return getComputedStyle(document.documentElement).getPropertyValue('--e-low');
+    if(v<=6)return getComputedStyle(document.documentElement).getPropertyValue('--e-mid');
+    if(v<=8)return getComputedStyle(document.documentElement).getPropertyValue('--e-high');
+    return getComputedStyle(document.documentElement).getPropertyValue('--e-peak');
+  }
+  document.getElementById('ledgerBody').innerHTML = WEEKS.map(d=>`
+    <tr>
+      <td><span class="wk">${d.w}주차<small>${d.range}</small></span></td>
+      <td><div class="ent"><span class="dot" style="--c:${entColor(d.entropy)};background:${entColor(d.entropy)}"></span><span class="n">${d.entropy}</span></div></td>
+      <td class="kw">${d.kw}</td>
+      <td class="form">${d.form}<span>${d.formEn}</span></td>
+      <td class="line-q">${d.line}</td>
+    </tr>`).join('');
+
+  // ── 엔트로피 차트(슬라이드 5) ─────────────────────────────
+  function renderEntropyChart(){
+    const el=document.getElementById('entropyCanvas');
+    if(!el)return;
+    if(typeof Chart==='undefined'){ // CDN 실패 시에도 빈 화면 대신 안내 + 데이터 노출
+      el.closest('.chart-box').innerHTML=
+        '<p style="color:var(--muted);font-family:var(--batang);text-align:center;padding-top:150px">'+
+        '엔트로피 추이 &nbsp;'+WEEKS.map(d=>d.entropy).join(' → ')+
+        '<br><span style="font-size:13px">(차트 라이브러리를 불러오지 못했습니다)</span></p>';
+      return;
+    }
+    const labels=WEEKS.map(d=>[`${d.w}주차`,d.range]);
+    const data=WEEKS.map(d=>d.entropy);
+    const colors=WEEKS.map(d=>entColor(d.entropy));
+    const ctx=el.getContext('2d');
+    const grad=ctx.createLinearGradient(0,0,0,340);
+    grad.addColorStop(0,'rgba(232,89,107,0.30)');
+    grad.addColorStop(.55,'rgba(167,139,250,0.12)');
+    grad.addColorStop(1,'rgba(63,214,200,0.02)');
+    new Chart(el,{type:'line',data:{labels,datasets:[{data,borderColor:'#e8b962',
+      backgroundColor:grad,pointBackgroundColor:colors,pointBorderColor:'#0a0a14',pointBorderWidth:2,
+      pointRadius:7,pointHoverRadius:9,tension:.4,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:1100},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`엔트로피 ${c.parsed.y}`,
+          afterLabel:c=>`♩ ${WEEKS[c.dataIndex].form}`},backgroundColor:'#13132a',
+          borderColor:'#26264a',borderWidth:1,titleColor:'#e8b962',bodyColor:'#ececf4'}},
+        scales:{y:{min:0,max:10,ticks:{color:'#6a6a8c',stepSize:2},grid:{color:'rgba(38,38,74,0.5)'}},
+          x:{ticks:{color:'#9494b4'},grid:{display:false}}}}});
+  }
+
+  // ── 반응형 스케일 ────────────────────────────────────────
+  const stage=document.getElementById('stage');
+  function fit(){
+    const s=Math.min(window.innerWidth/1280,window.innerHeight/720);
+    stage.style.setProperty('--s',s);
+  }
+  window.addEventListener('resize',fit);fit();
+
+  // ── 내비게이션 ───────────────────────────────────────────
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  document.getElementById('total').textContent=slides.length;
+  function go(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    document.getElementById('cur').textContent=i+1;
+    if(slides[i].classList.contains('chart')&&!slides[i].dataset.drawn){slides[i].dataset.drawn='1';renderEntropyChart();}
+  }
+  document.getElementById('next').onclick=()=>go(i+1);
+  document.getElementById('prev').onclick=()=>go(i-1);
+  addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' ')go(i+1);
+    if(e.key==='ArrowLeft')go(i-1);
+    if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+  });
+  let tx=0;
+  addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(dx<0?i+1:i-1);},{passive:true});
+</script>
+</body>
+</html>
