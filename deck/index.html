@@ -158,6 +158,12 @@
   .nav .count b{color:var(--gold);font-weight:500}
   .hint{position:fixed;top:18px;right:20px;font-size:11px;letter-spacing:.16em;color:var(--muted-2);
     text-transform:uppercase;z-index:20}
+  .dl-btn{position:fixed;top:16px;left:20px;z-index:20;display:inline-flex;align-items:center;gap:7px;
+    text-decoration:none;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.08em;
+    color:var(--gold);background:rgba(12,12,26,.7);backdrop-filter:blur(8px);
+    border:1px solid var(--gold-dim);border-radius:100px;padding:8px 15px;transition:all .2s}
+  .dl-btn:hover{background:var(--gold);color:#0a0a14;border-color:var(--gold)}
+  .dl-btn svg{display:block}
 
   /* ── Overview (slide 2) ────────────────────────────────── */
   .tri{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:6px}
@@ -535,6 +541,10 @@
 </div>
 
 <div class="hint">← → 또는 스페이스 · F 전체화면</div>
+<a class="dl-btn" href="2025451047-손재완.pptx" download title="PPTX 발표 파일 다운로드">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  PPTX
+</a>
 <nav class="nav">
   <button id="prev" aria-label="이전">‹</button>
   <span class="count"><b id="cur">1</b> / <span id="total">2</span></span>
